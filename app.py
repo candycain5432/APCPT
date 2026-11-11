@@ -56,45 +56,150 @@ AP CPT:
 
 
 import random
-#import colorama
+from colorama import Fore, Back, Style
 
 rednum = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]
-wheelnum = [00,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36]
+wheelnum = ["00",0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36]
 history = []
 starting_chips = 5000
-
+betamount = 0
 chips = starting_chips
+usernum = None
+won = None
+header = Fore.BLUE
 
-while chips > 0:
-    bet = 0
-    print(chips)
-
-    try:
+def check_win(a,b,c):
+    global won
+    if a == 1:
+        if color == "red":
+            won = 1
+        else:
+            won = 0
     
-        bet = int(input("""(1) RED or BLACK
-(2) ODD or EVEN
-(3) LOW or HIGH
-(4) Number
-"""))
+    elif a == 2:
+        if color == "black":
+            won = 1
+        else:
+            won = 0
     
-    except ValueError:
-        print("please enter a valid number")
+    elif a == 3:
+        if b % 2 == 0:
+            won = 0
+        else:
+            won = 1
     
-    if bet == 1:
-        try:
-            color = int(input("""(1) RED
-(2) BLACK
-"""))
+    elif a == 4:
+        if b % 2 == 0:
+            won = 1
+        else:
+            won = 0
+    
+    elif a == 5:
+        if b <= 18:
+            won = 1
+        else:
+            won = 0
+    
+    elif a == 6:
+        if b >= 19:
+            won = 1
+        else:
+            won = 0
 
-        except ValueError:
-            print("Please enter a valid number")
-
-    elif bet == 2:
-        print("odd or even")
-    elif bet == 3:
-        print("low or high")
-    elif bet == 4:
-        print("number")
+    elif a == 7:
+        if c == b:
+            won = 1
+        else:
+            won = 0
+    
     else:
-        print("Please enter a valid number")
+        print("Something went wrong")
 
+    if won == 1:
+        return True
+    else:
+        return False
+
+
+
+
+
+
+
+
+while chips > 0: 
+    #SHOW CHIPS
+    print(Fore.YELLOW + f"--Chips:{chips}")
+    print(Style.RESET_ALL)
+    print(Fore.GREEN + f"--History:{history}")
+    print(Style.RESET_ALL)
+    bettype = int(input("""(1) RED
+(2) BLACK
+(3) ODD
+(4) EVEN
+(5) LOW
+(6) HIGH
+(7) NUMBER\n"""))
+
+    if bettype == 7:
+        usernum = input(header + "-Choose a number 0-36 or 00:\n")
+        print(Style.RESET_ALL)
+
+    validity = 0
+    while validity == 0:
+        betamount = int(input(header + "-Enter a valid bet amount: (minimum of 1)\n"))
+        
+        print(Style.RESET_ALL)
+        if betamount > chips:
+            print(Back.RED + Fore.YELLOW+ "That is too high of a bet please enter a valid bet")
+        elif betamount < 1:
+            print(Back.RED + Fore.YELLOW + "That is too low of a bet please enter a valid bet")
+        else:
+            validity = 1
+
+
+    ready = input(header + "-press enter to spin or type 'cancel' to cancel\n")
+    if ready == "cancel":
+        continue
+    
+    print(Style.RESET_ALL)
+    spinnum = random.choice(wheelnum)
+    print(spinnum) # REMOVE
+    history.append(spinnum)
+    
+    if spinnum == 0:
+        color = "green"
+        print(Fore.GREEN + f"Spin = 0")
+        print(Style.RESET_ALL)
+
+    elif spinnum == "00":
+        color = "green"
+        print(Fore.GREEN + f"Spin = 00")
+        print(Style.RESET_ALL)
+    elif spinnum in (rednum):
+        color = "red"
+        print(Fore.RED + f"Spin = {spinnum}")
+        print(Style.RESET_ALL)
+    else:
+        color = "black"
+        print(Fore.BLACK + Back.WHITE + f"Spin = {spinnum}")
+        print(Style.RESET_ALL)
+
+    print(color) # remove
+
+    result = check_win(bettype, spinnum, usernum)
+
+    if result == True:
+        print(Fore.GREEN + "- - - - -YOU WON!\n")
+    else:
+        print(Fore.RED + "- - - - - You lost\n")
+    
+    
+    print(Style.RESET_ALL)
+
+    if result == True and bettype <= 6:
+        chips += betamount
+    elif result == True and bettype == 7:
+        chips += betamount * 35
+    else:
+        chips -= betamount
