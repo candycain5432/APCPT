@@ -1,24 +1,44 @@
 '''
 ERRORS:
-1. Line 77, color_number: "00" == 0 is False, so "00" shows as black/white in history instead of green.
 
-2. Lines 104, 116, 122, check_win: b % 2, b <= 18, and b >= 19 crash with a TypeError when b is "00".
+1. Stale `won` after a losing number bet on 0 or 00
+   In check_win, the `if str(b) == c:` block in the green branch has no else,
+   so `won` keeps last round's value. Add an else, or set won = 0 at the top
+   of check_win.
 
-3. Lines 104-124, check_win: 0 counts as even and low, so it wins those bets. 0 and 00 should lose them.
+2. "Redo" doesn't undo anything
+   It spins again at the same stake and applies a second result on top of the
+   first, so it's a free extra round. Either rename it ("repeat bet") or
+   reverse the first round's chip change before re-spinning.
 
-4. Line 128, check_win: usernum is a string from input() and spinnum is an int, so "5" == 5 is False. Number bets can only ever win on "00".
+3. "Too big" message gets cleared
+   It only shows now because of the duplicate prompt. Once that's gone,
+   clearscreen() at the top of the loop wipes it before it can be read.
 
-5. Lines 92 and 98, check_win: it reads the global `color` instead of getting it as a parameter. In redo_bet, `color` is local, so check_win sees the previous spin's color.
+4. int(input(...)) crashes on non-numbers
+   Bet type and bet amount both raise ValueError on "redo", "abc", or an empty
+   line. Wrap each in try/except ValueError inside its retry loop.
 
-7. redo_bet: no check that betamount <= chips, so chips can go negative.
+5. Number pick isn't validated
+   "99", "abc", "", "17 " and "05" are accepted and silently lose. Check the
+   input against the wheel's labels (as strings) and re-ask.
 
-8. Lines 207 and 231: bet type isn't validated. Entering 0, 8, etc. gives bettypestr "Error", and the game continues. check_win then prints "Something went wrong" and returns the stale `won` value.
+6. Dead code
+   `else: print("Something went wrong")` in check_win and the
+   bettypestr = "Error" branch can never run now. Delete them.
 
-9. Lines 207, 237, 212: int(input()) crashes with ValueError on non-numbers. The number bet (usernum) isn't validated either, so "abc" or 37 is accepted.
+7. History grows forever
+   print_history prints every spin, so the line wraps after a few dozen.
+   Show only the last ~10.
 
-11. redo_bet: it recurses into itself and duplicates the main loop's spin logic.
+8. Not portable
+   os.system('clear') only works on Linux/macOS. On Windows it errors, and
+   colorama may need colorama.init() for colors to render.
 
-13. Line 73 and imports: os.system('clear') doesn't work on Windows, and colorama's init() is never called.
+9. Style
+   Stray semicolon in `return;`. `won`, `result` and `color` are globals
+   shared between functions; return values and pass `color` in as a
+   parameter instead.
 '''
 
 
@@ -94,6 +114,7 @@ try:
     usernum = 0
     won = None
     header = Fore.BLUE
+    betv = None
 
     def clearscreen():
         os.system('clear')
@@ -113,53 +134,60 @@ try:
 # This segment was made with Claude AI with tweaks by me
 
 
-    def check_win(a,b,c):
+    def check_win(a,b,c): #bettype, spinnum, usernum
         global won, color
-        
-        if a == 1:
-            if color == "red":
-                won = 1
+        if b in (0, "00"):
+            if a == 7:
+                if str(b) == c:
+                    won = 1
             else:
                 won = 0
-        
-        elif a == 2:
-            if color == "black":
-                won = 1
-            else:
-                won = 0
-        
-        elif a == 3:
-            if b % 2 == 0:
-                won = 0
-            else:
-                won = 1
-        
-        elif a == 4:
-            if b % 2 == 0:
-                won = 1
-            else:
-                won = 0
-        
-        elif a == 5:
-            if b <= 18:
-                won = 1
-            else:
-                won = 0
-        
-        elif a == 6:
-            if b >= 19:
-                won = 1
-            else:
-                won = 0
-
-        elif a == 7:
-            if c == b:
-                won = 1
-            else:
-                won = 0
-        
         else:
-            print("Something went wrong")
+
+            if a == 1:
+                if color == "red":
+                    won = 1
+                else:
+                    won = 0
+            
+            elif a == 2:
+                if color == "black":
+                    won = 1
+                else:
+                    won = 0
+            
+            elif a == 3:
+                if b % 2 == 0:
+                    won = 0
+                else:
+                    won = 1
+            
+            elif a == 4:
+                if b % 2 == 0:
+                    won = 1
+                else:
+                    won = 0
+            
+            elif a == 5:
+                if b <= 18:
+                    won = 1
+                else:
+                    won = 0
+            
+            elif a == 6:
+                if b >= 19:
+                    won = 1
+                else:
+                    won = 0
+
+            elif a == 7:
+                if c == str(b):
+                    won = 1
+                else:
+                    won = 0
+            
+            else:
+                print("Something went wrong")
 
         if won == 1:
             return True
@@ -174,51 +202,57 @@ try:
         else:
             print(Fore.RED + "You lost\n")
 
+    def game_over():
+        print("GAME OVER, The house always wins")
 
-    def redo_bet():
+
+    def bet():
         global chips, result, color
-        clearscreen()
-        print(Fore.YELLOW + f"--Chips:{chips}")
-        print(Style.RESET_ALL)
-        print(f"You bet {betamount} on {bettypestr}")
-        spinnum = random.choice(wheelnum)
-        history.append(spinnum)
-
-        if spinnum == 0:
-            color = "green"
-            print(Fore.GREEN + f"Spin = 0")
-            print(Style.RESET_ALL)
-
-        elif spinnum == "00":
-            color = "green"
-            print(Fore.GREEN + f"Spin = 00")
-            print(Style.RESET_ALL)
-        elif spinnum in (rednum):
-            color = "red"
-            print(Fore.RED + f"Spin = {spinnum}-Red")
-            print(Style.RESET_ALL)
+        if betamount > chips:
+            print("That bet is too big")
+            return;
         else:
-            color = "black"
-            print(Fore.BLACK + Back.WHITE + f"Spin = {spinnum}-Black")
+            clearscreen()
+            print(Fore.YELLOW + f"--Chips:{chips}")
             print(Style.RESET_ALL)
+            print(f"You bet {betamount} on {bettypestr}")
+            spinnum = random.choice(wheelnum)
+            history.append(spinnum)
 
-        result = check_win(bettype, spinnum, usernum)
+            if spinnum == 0:
+                color = "green"
+                print(Fore.GREEN + f"Spin = 0")
+                print(Style.RESET_ALL)
 
-        win_lose()
+            elif spinnum == "00":
+                color = "green"
+                print(Fore.GREEN + f"Spin = 00")
+                print(Style.RESET_ALL)
+            elif spinnum in (rednum):
+                color = "red"
+                print(Fore.RED + f"Spin = {spinnum}-Red")
+                print(Style.RESET_ALL)
+            else:
+                color = "black"
+                print(Fore.BLACK + Back.WHITE + f"Spin = {spinnum}-Black")
+                print(Style.RESET_ALL)
 
-        if result == True and bettype <= 6:
-            chips += betamount
-        elif result == True and bettype == 7:
-            chips += betamount * 35
-        else:
-            chips -= betamount
-        
-        print(Style.RESET_ALL)
+            result = check_win(bettype, spinnum, usernum)
 
-        restart = input("Press enter to play again or 'redo' to redo your bet: ")
-        if restart == "redo":
-            redo_bet()
+            win_lose()
 
+            if result == True and bettype <= 6:
+                chips += betamount
+            elif result == True and bettype == 7:
+                chips += betamount * 35
+            else:
+                chips -= betamount
+            
+            print(Style.RESET_ALL)
+            
+            restart = input("Press enter to play again or 'redo' to redo your bet: ")
+            if restart == "redo":
+                bet()
         
     while chips > 0: 
         clearscreen()
@@ -234,13 +268,18 @@ try:
 (5) LOW
 (6) HIGH
 (7) NUMBER\n""")
-
-        bettype = int(input(header + "-Enter the number of the bet type you wish to bet on: "))
-
+        betv = 0
+        while betv == 0:
+            bettype = int(input(header + "-Enter the number of the bet type you wish to bet on: "))
+        
+            if (bettype >= 1) and (bettype <= 7):
+                betv = 1
+            else:
+                print("Please enter a number 1-7")
 
         #Asks user for number if picked 7 for bettype
         if bettype == 7:
-            usernum = int(input(header + "-Choose a number 0-36 or 00: "))
+            usernum = input(header + "-Choose a number 0-36 or 00: ")
             print(Style.RESET_ALL)
 
         # Turns the bet type into a string so it can be printed
@@ -274,62 +313,12 @@ try:
                 print(Back.RED + Fore.YELLOW + "That is too low of a bet please enter a valid bet")
             else:
                 validity = 1
-        clearscreen()
-        print(f"You bet {betamount} on {bettypestr}")
-        ready = input(header + "-press enter to spin or type 'cancel' to cancel\n")
-        if ready == "cancel":
-            continue
-        
-        print(Style.RESET_ALL)
-        spinnum = random.choice(wheelnum)
-        history.append(spinnum)
-        clearscreen()
-        
-        print(Fore.YELLOW + f"--Chips:{chips}")
-        print(Style.RESET_ALL)
-        if spinnum == 0:
-            color = "green"
-            print(Fore.GREEN + f"Spin = 0")
-            print(Style.RESET_ALL)
-
-        elif spinnum == "00":
-            color = "green"
-            print(Fore.GREEN + f"Spin = 00")
-            print(Style.RESET_ALL)
-        elif spinnum in (rednum):
-            color = "red"
-            print(Fore.RED + f"Spin = {spinnum}-Red")
-            print(Style.RESET_ALL)
-        else:
-            color = "black"
-            print(Fore.BLACK + Back.WHITE + f"Spin = {spinnum}-Black")
-            print(Style.RESET_ALL)
-
-
-        result = check_win(bettype, spinnum, usernum)
-
-        win_lose()
         
         
-        print(Style.RESET_ALL)
-
-        
-
-        if result == True and bettype <= 6:
-            chips += betamount
-        elif result == True and bettype == 7:
-            chips += betamount * 35
-        else:
-            chips -= betamount
-
-        restart = input("Press enter to play again or 'redo' to redo your bet: ")
-        if restart == "redo":
-            redo_bet()
-        else:
-            continue
+        bet()
     
     else:
-        print("GAME OVER, The house always wins")
+        game_over()
 
 
 
