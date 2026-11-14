@@ -1,25 +1,4 @@
-'''
-ERRORS:
-1. "Too big" message gets erased
-   If you repeat a bet you can no longer afford, bet() prints the message and
-   returns, then clearscreen() at the top of the main loop wipes it. Add an
-   input() pause after the message. Same at 0 chips: the game still offers
-   "repeat" before ending.
 
-2. Dead code
-   `else: print("Something went wrong")` in check_win and the
-   `bettypestr = "Error"` branch can't run now that the bet type is validated.
-   Delete them.
-
-3. Not portable
-   os.system('clear') doesn't work on Windows.
-
-4. Style
-   - Stray semicolon in `return;`
-   - strwheel duplicates wheelnum (build one from the other)
-   - won, result and color are globals; pass color into check_win as a
-     parameter and return results instead
-'''
 
 
 
@@ -82,8 +61,16 @@ AP CPT:
 try:
 
     import random
-    from colorama import Fore, Back, Style
     import os
+    import shutil
+    from rich.console import Console
+    from rich.theme import Theme
+    from rich.live import Live
+    from rich.rule import Rule
+    import time
+    from rich.table import Table
+    from rich.align import Align
+    from rich.panel import Panel
 
     rednum = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]
     wheelnum = ["00",0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36]
@@ -94,25 +81,44 @@ try:
     chips = starting_chips
     usernum = 0
     won = None
-    header = Fore.BLUE
+    console = Console(theme=Theme({"header": "blue", "error": "yellow on red"}), highlight=False)
     betv = None
     bettype = 0
+    width = shutil.get_terminal_size().columns
+    n = None
+    last_change = 0
 
     def clearscreen():
         os.system('clear')
-        print(Style.RESET_ALL)
+
+    def show_menu():
+        t = Table(title="Place your bet")
+        t.add_column("#", justify="right", style="bold")
+        t.add_column("Bet")
+        t.add_column("Pays", justify="right", style="gold3")
+
+        t.add_row("1", "[white on red] Red [/]", "1:1")
+        t.add_row("2", "[white on black] Black [/]", "1:1")
+        t.add_row("3", " Odd", "1:1")
+        t.add_row("4", " Even", "1:1")
+        t.add_row("5", " Low (1–18)", "1:1")
+        t.add_row("6", " High (19–36)", "1:1")
+        t.add_row("7", " Single number", "35:1")
+
+        console.print(Align.center(t))
+        console.print()
 
 # This segment was made with Claude AI with tweaks by me
     def color_number(num):
         if num in (0, "00"):
-            return f"{Fore.GREEN}{num}{Style.RESET_ALL}"
+            return f"[white on green] {num} [/]"
         elif num in rednum:
-            return f"{Fore.RED}{num}{Style.RESET_ALL}"
+            return f"[white on red] {num} [/]"
         else:
-            return f"{Fore.CYAN}{num}{Style.RESET_ALL}"
+            return f"[white on black] {num} [/]"
 
     def print_history(history):
-        print("History: " + ", ".join(color_number(n) for n in history))
+        console.print("History: " + ", ".join(color_number(n) for n in history))
 # This segment was made with Claude AI with tweaks by me
 
 
@@ -178,13 +184,14 @@ try:
         else:
             return False
 
-
-    def win_lose():
-        global result
-        if result == True:
-            print(Fore.GREEN + "YOU WON!\n")
+    def chips_header():
+        if last_change > 0:
+            suffix = f"[green]({last_change:+})[/]"
+        elif last_change < 0:
+            suffix = f"[red]({last_change:+})[/]"
         else:
-            print(Fore.RED + "You lost\n")
+            suffix = ""
+        console.rule(f"[gold3]Chips: {chips}[/] {suffix}", style="gold3")
 
     def game_over():
         print("GAME OVER, The house always wins")
@@ -192,91 +199,109 @@ try:
 
 
     def bet():
-        global chips, result, color
+        global chips, result, color, last_change
+        delay = 0.05
         if betamount > chips:
             print("That bet is too big")
             return;
         else:
             clearscreen()
-            print(Fore.YELLOW + f"--Chips:{chips}")
-            print(Style.RESET_ALL)
+            chips_header()
+            
             print(f"You bet {betamount} on {bettypestr}")
+            console.input("[dim]Press Enter to spin...[/]")
             spinnum = random.choice(wheelnum)
             history.append(spinnum)
+            with Live(refresh_per_second=20) as live:
+                for i in range(random.randrange(15, 20)):
+                    n = random.choice(wheelnum)  
+                    live.update(Rule(color_number(n), characters="="))
+                    time.sleep(delay)
+                    delay *= 1.15
+                live.update(Rule(color_number(spinnum), characters="=")) 
 
             if spinnum == 0:
                 color = "green"
-                print(Fore.GREEN + f"Spin = 0")
-                print(Style.RESET_ALL)
+                console.print(f"[green]Spin = 0[/]")
+                
 
             elif spinnum == "00":
                 color = "green"
-                print(Fore.GREEN + f"Spin = 00")
-                print(Style.RESET_ALL)
+                console.print(f"[green]Spin = 00[/]")
+                
             elif spinnum in (rednum):
                 color = "red"
-                print(Fore.RED + f"Spin = {spinnum}-Red")
-                print(Style.RESET_ALL)
+                console.print(f"[white on red]Spin = {spinnum}-Red[/]")
+                
             else:
                 color = "black"
-                print(Fore.BLACK + Back.WHITE + f"Spin = {spinnum}-Black")
-                print(Style.RESET_ALL)
+                console.print(f"[white on black]Spin = {spinnum}-Black[/]")
+                
 
             result = check_win(bettype, spinnum, usernum)
 
-            win_lose()
-
             if result == True and bettype <= 6:
-                chips += betamount
+                change = betamount
             elif result == True and bettype == 7:
-                chips += betamount * 35
+                change = betamount * 35
             else:
-                chips -= betamount
+                change = -betamount
+
+            chips += change
+            last_change = change
+
+            if change > 0:
+                outcome = f"[bold green]YOU WON +{change}[/]"
+                border = "green"
+            else:
+                outcome = f"[bold red]You lost {-change}[/]"
+                border = "red"
             
-            print(Style.RESET_ALL)
+            text = f"You bet [gold3]{betamount}[/] on {bettypestr}\nLanded on {color_number(spinnum)}\n{outcome}" 
+            console.print(Panel.fit(text, title="Result", border_style=border))                              
             
             restart = input("Press enter to play again or 'r' or 'R' to repeat your bet: ")
             if restart.lower().strip() == "r":
                 bet()
-        
+    console.clear()
+    console.print()
+    console.print(Panel("1. Pick what to bet on\n2. Choose how many chips\n3. Press Enter to spin", title="How to play", expand=False))
+    console.input("[dim]Press Enter to start...[/]")
     while chips > 0: 
         clearscreen()
         #SHOW CHIPS
-        print(Fore.YELLOW + f"--Chips:{chips}")
-        print(Style.RESET_ALL)
+        chips_header()
         print_history(history)
-        print(Style.RESET_ALL)
-        print("""(1) RED
-(2) BLACK
-(3) ODD
-(4) EVEN
-(5) LOW
-(6) HIGH
-(7) NUMBER\n""")
+        
+        show_menu()
+
         betv = 0
         while betv == 0:
             try:
-                bettype = int(input(header + "-Enter the number of the bet type you wish to bet on: "))
+                bettype = int(console.input("[header]-Enter the number of the bet type you wish to bet on: [/]"))
             except ValueError:
-                print("Please enter a valid number")
+                console.print("[error]Please enter a valid number[/]")
+                
                 continue
             
             if (bettype >= 1) and (bettype <= 7):
                 betv = 1
             else:
-                print("Please enter a number 1-7")
+                console.print("[error]Please enter a number 1-7[/]")
+                
 
         #Asks user for number if picked 7 for bettype
         if bettype == 7:
             unv = 0
             while unv == 0:
-                usernum = input(header + "-Choose a number 0-36 or 00: ")
-                print(Style.RESET_ALL)
+                usernum = console.input("[header]-Choose a number 0-36 or 00: [/]")
+                
 
                 if usernum in strwheel:
                     unv = 1
                 else:
-                    print("Please enter a number 0-36 or 00")
+                    console.print("[error]Please enter a number 0-36 or 00[/]")
+                    
 
 
         # Turns the bet type into a string so it can be printed
@@ -302,17 +327,20 @@ try:
         validity = 0
         while validity == 0:
             try:
-                betamount = int(input(header + "-Enter a valid bet amount: (minimum of 1): "))
+                betamount = int(console.input("[header]-Enter a valid bet amount: (minimum of 1): [/]"))
             except ValueError:
-                print("Please enter a valid number")
+                console.print("[error]Please enter a valid number[/]")
+                
                 continue
 
 
-            print(Style.RESET_ALL)
+            
             if betamount > chips:
-                print(Back.RED + Fore.YELLOW+ "That is too high of a bet please enter a valid bet")
+                console.print("[error]That is too high of a bet please enter a valid bet[/]")
+                
             elif betamount < 1:
-                print(Back.RED + Fore.YELLOW + "That is too low of a bet please enter a valid bet")
+                console.print("[error]That is too low of a bet please enter a valid bet[/]")
+                
             else:
                 validity = 1
         

@@ -97,7 +97,7 @@ try:
 
     def clearscreen():
         os.system('clear')
-        print(Style.RESET_ALL)
+        
 
 # This segment was made with Claude AI with tweaks by me
     def color_number(num):
@@ -184,7 +184,7 @@ try:
         global chips, result, color
         clearscreen()
         print(Fore.YELLOW + f"--Chips:{chips}")
-        print(Style.RESET_ALL)
+        
         print(f"You bet {betamount} on {bettypestr}")
         spinnum = random.choice(wheelnum)
         history.append(spinnum)
@@ -192,20 +192,20 @@ try:
         if spinnum == 0:
             color = "green"
             print(Fore.GREEN + f"Spin = 0")
-            print(Style.RESET_ALL)
+            
 
         elif spinnum == "00":
             color = "green"
             print(Fore.GREEN + f"Spin = 00")
-            print(Style.RESET_ALL)
+            
         elif spinnum in (rednum):
             color = "red"
             print(Fore.RED + f"Spin = {spinnum}-Red")
-            print(Style.RESET_ALL)
+            
         else:
             color = "black"
             print(Fore.BLACK + Back.WHITE + f"Spin = {spinnum}-Black")
-            print(Style.RESET_ALL)
+            
 
         result = check_win(bettype, spinnum, usernum)
 
@@ -218,7 +218,7 @@ try:
         else:
             chips -= betamount
         
-        print(Style.RESET_ALL)
+        
 
         restart = input("Press enter to play again or 'redo' to redo your bet: ")
         if restart == "redo":
@@ -229,9 +229,9 @@ try:
         clearscreen()
         #SHOW CHIPS
         print(Fore.YELLOW + f"--Chips:{chips}")
-        print(Style.RESET_ALL)
+        
         print_history(history)
-        print(Style.RESET_ALL)
+        
         print("""(1) RED
 (2) BLACK
 (3) ODD
@@ -246,7 +246,7 @@ try:
         #Asks user for number if picked 7 for bettype
         if bettype == 7:
             usernum = int(input(header + "-Choose a number 0-36 or 00: "))
-            print(Style.RESET_ALL)
+            
 
         # Turns the bet type into a string so it can be printed
         if bettype == 1:
@@ -272,7 +272,7 @@ try:
         while validity == 0:
             betamount = int(input(header + "-Enter a valid bet amount: (minimum of 1): "))
             
-            print(Style.RESET_ALL)
+            
             if betamount > chips:
                 print(Back.RED + Fore.YELLOW+ "That is too high of a bet please enter a valid bet")
             elif betamount < 1:
@@ -285,30 +285,30 @@ try:
         if ready == "cancel":
             continue
         
-        print(Style.RESET_ALL)
+        
         spinnum = random.choice(wheelnum)
         history.append(spinnum)
         clearscreen()
         
         print(Fore.YELLOW + f"--Chips:{chips}")
-        print(Style.RESET_ALL)
+        
         if spinnum == 0:
             color = "green"
             print(Fore.GREEN + f"Spin = 0")
-            print(Style.RESET_ALL)
+            
 
         elif spinnum == "00":
             color = "green"
             print(Fore.GREEN + f"Spin = 00")
-            print(Style.RESET_ALL)
+            
         elif spinnum in (rednum):
             color = "red"
             print(Fore.RED + f"Spin = {spinnum}-Red")
-            print(Style.RESET_ALL)
+            
         else:
             color = "black"
             print(Fore.BLACK + Back.WHITE + f"Spin = {spinnum}-Black")
-            print(Style.RESET_ALL)
+            
 
 
         result = check_win(bettype, int(spinnum), usernum)
@@ -316,7 +316,7 @@ try:
         win_lose()
         
         
-        print(Style.RESET_ALL)
+        
 
         
 
