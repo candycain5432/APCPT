@@ -1,44 +1,24 @@
 '''
 ERRORS:
+1. "Too big" message gets erased
+   If you repeat a bet you can no longer afford, bet() prints the message and
+   returns, then clearscreen() at the top of the main loop wipes it. Add an
+   input() pause after the message. Same at 0 chips: the game still offers
+   "repeat" before ending.
 
-1. Stale `won` after a losing number bet on 0 or 00
-   In check_win, the `if str(b) == c:` block in the green branch has no else,
-   so `won` keeps last round's value. Add an else, or set won = 0 at the top
-   of check_win.
-
-2. "Redo" doesn't undo anything
-   It spins again at the same stake and applies a second result on top of the
-   first, so it's a free extra round. Either rename it ("repeat bet") or
-   reverse the first round's chip change before re-spinning.
-
-3. "Too big" message gets cleared
-   It only shows now because of the duplicate prompt. Once that's gone,
-   clearscreen() at the top of the loop wipes it before it can be read.
-
-4. int(input(...)) crashes on non-numbers
-   Bet type and bet amount both raise ValueError on "redo", "abc", or an empty
-   line. Wrap each in try/except ValueError inside its retry loop.
-
-5. Number pick isn't validated
-   "99", "abc", "", "17 " and "05" are accepted and silently lose. Check the
-   input against the wheel's labels (as strings) and re-ask.
-
-6. Dead code
+2. Dead code
    `else: print("Something went wrong")` in check_win and the
-   bettypestr = "Error" branch can never run now. Delete them.
+   `bettypestr = "Error"` branch can't run now that the bet type is validated.
+   Delete them.
 
-7. History grows forever
-   print_history prints every spin, so the line wraps after a few dozen.
-   Show only the last ~10.
+3. Not portable
+   os.system('clear') doesn't work on Windows.
 
-8. Not portable
-   os.system('clear') only works on Linux/macOS. On Windows it errors, and
-   colorama may need colorama.init() for colors to render.
-
-9. Style
-   Stray semicolon in `return;`. `won`, `result` and `color` are globals
-   shared between functions; return values and pass `color` in as a
-   parameter instead.
+4. Style
+   - Stray semicolon in `return;`
+   - strwheel duplicates wheelnum (build one from the other)
+   - won, result and color are globals; pass color into check_win as a
+     parameter and return results instead
 '''
 
 
@@ -107,6 +87,7 @@ try:
 
     rednum = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]
     wheelnum = ["00",0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36]
+    strwheel = ["00","0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36"]
     history = []
     starting_chips = 5000
     betamount = 0
@@ -115,6 +96,7 @@ try:
     won = None
     header = Fore.BLUE
     betv = None
+    bettype = 0
 
     def clearscreen():
         os.system('clear')
@@ -140,6 +122,8 @@ try:
             if a == 7:
                 if str(b) == c:
                     won = 1
+                else:
+                    won = 0
             else:
                 won = 0
         else:
@@ -204,6 +188,7 @@ try:
 
     def game_over():
         print("GAME OVER, The house always wins")
+        print_history(history)
 
 
     def bet():
@@ -250,8 +235,8 @@ try:
             
             print(Style.RESET_ALL)
             
-            restart = input("Press enter to play again or 'redo' to redo your bet: ")
-            if restart == "redo":
+            restart = input("Press enter to play again or 'r' or 'R' to repeat your bet: ")
+            if restart.lower().strip() == "r":
                 bet()
         
     while chips > 0: 
@@ -270,8 +255,12 @@ try:
 (7) NUMBER\n""")
         betv = 0
         while betv == 0:
-            bettype = int(input(header + "-Enter the number of the bet type you wish to bet on: "))
-        
+            try:
+                bettype = int(input(header + "-Enter the number of the bet type you wish to bet on: "))
+            except ValueError:
+                print("Please enter a valid number")
+                continue
+            
             if (bettype >= 1) and (bettype <= 7):
                 betv = 1
             else:
@@ -279,8 +268,16 @@ try:
 
         #Asks user for number if picked 7 for bettype
         if bettype == 7:
-            usernum = input(header + "-Choose a number 0-36 or 00: ")
-            print(Style.RESET_ALL)
+            unv = 0
+            while unv == 0:
+                usernum = input(header + "-Choose a number 0-36 or 00: ")
+                print(Style.RESET_ALL)
+
+                if usernum in strwheel:
+                    unv = 1
+                else:
+                    print("Please enter a number 0-36 or 00")
+
 
         # Turns the bet type into a string so it can be printed
         if bettype == 1:
@@ -304,8 +301,13 @@ try:
 
         validity = 0
         while validity == 0:
-            betamount = int(input(header + "-Enter a valid bet amount: (minimum of 1): "))
-            
+            try:
+                betamount = int(input(header + "-Enter a valid bet amount: (minimum of 1): "))
+            except ValueError:
+                print("Please enter a valid number")
+                continue
+
+
             print(Style.RESET_ALL)
             if betamount > chips:
                 print(Back.RED + Fore.YELLOW+ "That is too high of a bet please enter a valid bet")
