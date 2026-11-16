@@ -9,8 +9,8 @@
 
 ### CPT-related (do before writing the response)
 - [ ] **4. Globals in `check_win`.** Pass `color` in as a parameter, make `won` local (or just `return True/False` directly), and stop using `result` as a global.
-- [ ] **5. Dead code:** `print("Something went wrong")` and `bettypestr = "Error"` can never run. Delete them.
-- [ ] **6. Rename `a, b, c`** in `check_win` to `bettype, spinnum, usernum` so graders can read it without the comment.
+- [x] **5. Dead code:** `print("Something went wrong")` and `bettypestr = "Error"` can never run. Delete them.
+- [x] **6. Rename `a, b, c`** in `check_win` to `bettype, spinnum, usernum` so graders can read it without the comment.
 
 ### Cleanup
 - [ ] **7.** `clearscreen()` → `console.clear()` (fixes Windows), then delete `os`, `shutil`, `width` and `n`.

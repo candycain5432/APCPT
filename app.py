@@ -62,7 +62,6 @@ try:
 
     import random
     import os
-    import shutil
     from rich.console import Console
     from rich.theme import Theme
     from rich.live import Live
@@ -71,6 +70,7 @@ try:
     from rich.table import Table
     from rich.align import Align
     from rich.panel import Panel
+    import questionary
 
     rednum = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]
     wheelnum = ["00",0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36]
@@ -84,13 +84,20 @@ try:
     console = Console(theme=Theme({"header": "blue", "error": "yellow on red"}), highlight=False)
     betv = None
     bettype = 0
-    width = shutil.get_terminal_size().columns
     n = None
     last_change = 0
+    casino_style = questionary.Style([
+    ("qmark", "fg:#BE1A1A bold"),        # the symbol before the question
+    ("question", "bold"),                # the question text
+    ("pointer", "fg:#60C1E5 bold"),      # the arrow next to the current option
+    ("highlighted", "fg:#60C1E5 bold underline italic"),  # the option the arrow is on
+    ("answer", "fg:#60C1E5 bold"),       # what they picked, shown after Enter
+    ("instruction", "fg:#808080 italic"),# the "(Use arrow keys)" hint
+    ])
 
     def clearscreen():
         os.system('clear')
-
+    '''
     def show_menu():
         t = Table(title="Place your bet")
         t.add_column("#", justify="right", style="bold")
@@ -107,6 +114,7 @@ try:
 
         console.print(Align.center(t))
         console.print()
+    '''
 
 # This segment was made with Claude AI with tweaks by me
     def color_number(num):
@@ -122,10 +130,10 @@ try:
 # This segment was made with Claude AI with tweaks by me
 
 
-    def check_win(a,b,c): #bettype, spinnum, usernum
+    def check_win(bettype,spinnum, usernum): #bettype, spinnum, usernum
         global won, color
-        if b in (0, "00"):
-            if a == 7:
+        if spinnum in (0, "00"):
+            if bettype == 7:
                 if str(b) == c:
                     won = 1
                 else:
@@ -134,50 +142,48 @@ try:
                 won = 0
         else:
 
-            if a == 1:
+            if bettype == 1:
                 if color == "red":
                     won = 1
                 else:
                     won = 0
             
-            elif a == 2:
+            elif bettype == 2:
                 if color == "black":
                     won = 1
                 else:
                     won = 0
             
-            elif a == 3:
-                if b % 2 == 0:
+            elif bettype == 3:
+                if spinnum % 2 == 0:
                     won = 0
                 else:
                     won = 1
             
-            elif a == 4:
-                if b % 2 == 0:
+            elif bettype == 4:
+                if spinnum % 2 == 0:
                     won = 1
                 else:
                     won = 0
             
-            elif a == 5:
-                if b <= 18:
+            elif bettype == 5:
+                if spinnum <= 18:
                     won = 1
                 else:
                     won = 0
             
-            elif a == 6:
-                if b >= 19:
+            elif bettype == 6:
+                if spinnum >= 19:
                     won = 1
                 else:
                     won = 0
 
-            elif a == 7:
-                if c == str(b):
+            elif bettype == 7:
+                if usernum == str(spinnum):
                     won = 1
                 else:
                     won = 0
             
-            else:
-                print("Something went wrong")
 
         if won == 1:
             return True
@@ -197,6 +203,20 @@ try:
         print("GAME OVER, The house always wins")
         print_history(history)
 
+
+    def check_betamount(text):
+        if not text.isdigit():
+            return "Please enter a whole number"
+        if int(text) < 1:
+            return "Minimum bet is 1"
+        if int(text) > chips:
+            return f"You only have {chips:,} chips"
+        return True
+
+    def check_usernum(text):
+        if text.strip() in strwheel:
+            return True
+        return "Enter a number 0-36 or 00"
 
     def bet():
         global chips, result, color, last_change
@@ -273,36 +293,28 @@ try:
         chips_header()
         print_history(history)
         
-        show_menu()
-
-        betv = 0
-        while betv == 0:
-            try:
-                bettype = int(console.input("[header]-Enter the number of the bet type you wish to bet on: [/]"))
-            except ValueError:
-                console.print("[error]Please enter a valid number[/]")
-                
-                continue
-            
-            if (bettype >= 1) and (bettype <= 7):
-                betv = 1
-            else:
-                console.print("[error]Please enter a number 1-7[/]")
+       # show_menu()
+        print()
+        choices = [
+            questionary.Choice("Red", value=1),
+            questionary.Choice("Black", value=2),
+            questionary.Choice("Odd", value=3),
+            questionary.Choice("Even", value=4),
+            questionary.Choice("Low (1-18)", value=5),
+            questionary.Choice("High (19-36)", value=6),
+            questionary.Choice("Single number", value=7),
+    ]
+        print()
+        bettype = questionary.select("Place your bet", choices=choices, style=casino_style).unsafe_ask()
+    
+    
                 
 
         #Asks user for number if picked 7 for bettype
         if bettype == 7:
-            unv = 0
-            while unv == 0:
-                usernum = console.input("[header]-Choose a number 0-36 or 00: [/]")
-                
-
-                if usernum in strwheel:
-                    unv = 1
-                else:
-                    console.print("[error]Please enter a number 0-36 or 00[/]")
-                    
-
+            print()
+            usernum = questionary.text("Pick a number (0-36 or 00):", validate=check_usernum, style=casino_style).unsafe_ask()
+        
 
         # Turns the bet type into a string so it can be printed
         if bettype == 1:
@@ -319,31 +331,16 @@ try:
             bettypestr = "High"
         elif bettype == 7:
             bettypestr = usernum
+
+
+        print()
+        answer = questionary.text(f"Bet amount (you have {chips:,}):",validate=check_betamount, style=casino_style).unsafe_ask()
+
+        if answer is None:
+            print("Cancelled")
         else:
-            bettypestr = "Error"
-
-
-
-        validity = 0
-        while validity == 0:
-            try:
-                betamount = int(console.input("[header]-Enter a valid bet amount: (minimum of 1): [/]"))
-            except ValueError:
-                console.print("[error]Please enter a valid number[/]")
-                
-                continue
-
-
-            
-            if betamount > chips:
-                console.print("[error]That is too high of a bet please enter a valid bet[/]")
-                
-            elif betamount < 1:
-                console.print("[error]That is too low of a bet please enter a valid bet[/]")
-                
-            else:
-                validity = 1
-        
+            betamount = int(answer)
+            print(f"You bet {betamount}")
         
         bet()
     
