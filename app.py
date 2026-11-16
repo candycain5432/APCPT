@@ -305,7 +305,7 @@ try:
             questionary.Choice("Single number", value=7),
     ]
         print()
-        bettype = questionary.select("Place your bet", choices=choices, style=casino_style).unsafe_ask()
+        bettype = questionary.select("Place your bet", choices=choices, style=casino_style, instruction="(↑↓ Arrow keys, then Enter)").unsafe_ask()
     
     
                 
